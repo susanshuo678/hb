@@ -32,9 +32,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=bounty_v3_secret_key_2026
     volumes:
-      # 🟢 关键修正：把本地 app 挂载到容器的 /app/app
+      # 🟢 关键修正：必须这样挂载，Python 才能找到 app 包
       - ./app:/app/app
-      # 挂载上传目录
       - ./uploads:/app/app/static/uploads
     depends_on:
       db:

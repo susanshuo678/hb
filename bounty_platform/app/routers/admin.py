@@ -25,7 +25,6 @@ def dashboard(request: Request, db: Session = Depends(get_db), user=Depends(deps
     }
     return templates.TemplateResponse("admin/dashboard.html", {
         "request": request, "user": user, "stats": stats, 
-        # 图表数据暂时留空，防止报错
         "chart_dates": [], "chart_users": [], "chart_subs": [], "chart_money": []
     })
 
@@ -43,13 +42,42 @@ def admin_user_balance(user_id: int = Form(...), amount: float = Form(...), db: 
         db.commit()
     return RedirectResponse("/admin/users", status_code=302)
 
+@router.post("/users/ban")
+def ban_user(user_id: int = Form(...), action: str = Form(...), db: Session = Depends(get_db), user=Depends(deps.get_current_admin)):
+    u = db.query(models.User).filter(models.User.id == user_id).first()
+    if u:
+        u.is_banned = (action == "ban")
+        db.commit()
+    return {"code": 200, "message": "操作成功"}
+
 # 3. 任务审核
 @router.get("/audit")
 def admin_audit(request: Request, db: Session = Depends(get_db), user=Depends(deps.get_current_admin)):
     subs = db.query(models.Submission).filter(models.Submission.status == "pending").all()
     return templates.TemplateResponse("admin/audit.html", {"request": request, "submissions": subs, "user": user})
 
-# 4. 发布任务页
+@router.post("/audit/review")
+def admin_review(submission_id: int = Form(...), action: str = Form(...), feedback: str = Form(None), amount: float = Form(0.0), db: Session = Depends(get_db)):
+    sub = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
+    if not sub: return RedirectResponse("/admin/audit", status_code=302)
+    
+    if action == "approve":
+        reward = amount if sub.task.price_mode == 'dynamic' else sub.task.price
+        sub.status = "approved"
+        sub.user.balance += reward
+        sub.final_amount = reward
+        # 简单处理返佣
+        if sub.user.inviter_id:
+            inviter = db.query(models.User).filter(models.User.id == sub.user.inviter_id).first()
+            if inviter: inviter.balance += reward * 0.1
+    else:
+        sub.status = "rejected"
+        sub.admin_feedback = feedback
+        
+    db.commit()
+    return RedirectResponse("/admin/audit", status_code=302)
+
+# 4. 发布任务
 @router.get("/task/new")
 def admin_task_new(request: Request, db: Session = Depends(get_db), user=Depends(deps.get_current_admin)):
     cats = db.query(models.TaskCategory).all()
@@ -58,30 +86,13 @@ def admin_task_new(request: Request, db: Session = Depends(get_db), user=Depends
         "request": request, "categories": cats, "mat_categories": mat_cats, "user": user
     })
 
-# 5. 提交新任务
 @router.post("/task/new")
-def admin_task_create(
-    title: str = Form(...), price: float = Form(...), category: str = Form(...),
-    description: str = Form(...), db: Session = Depends(get_db)
-):
-    # 简化版，完整字段请对照 Models
+def admin_task_create(title: str = Form(...), price: float = Form(0), category: str = Form(...), description: str = Form(...), db: Session = Depends(get_db)):
     db.add(models.Task(title=title, price=price, category=category, description=description))
     db.commit()
     return RedirectResponse("/admin/dashboard", status_code=302)
 
-# 6. 设置页面
+# 5. 设置页
 @router.get("/settings")
 def admin_settings(request: Request, db: Session = Depends(get_db), user=Depends(deps.get_current_admin)):
-    banners = db.query(models.Banner).all()
-    cats = db.query(models.TaskCategory).all()
-    
-    # 获取配置
-    def get_conf(k): 
-        c = db.query(models.SystemConfig).filter(models.SystemConfig.key == k).first()
-        return c.value if c else ""
-        
-    return templates.TemplateResponse("admin/settings.html", {
-        "request": request, "user": user, "banners": banners, "categories": cats,
-        "announcement": get_conf("announcement"),
-        "pay_qrcode": get_conf("pay_qrcode")
-    })
+    return templates.TemplateResponse("admin/settings.html", {"request": request, "user": user, "banners": db.query(models.Banner).all(), "categories": db.query(models.TaskCategory).all(), "announcement": "", "pay_qrcode": "", "commission_rate": 10})
