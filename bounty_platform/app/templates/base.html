@@ -2,63 +2,125 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>{% block title %}{% endblock %} - 红白悬赏</title>
-    
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}红白悬赏 V3 Enterprise{% endblock %}</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        :root { --primary-red: #d00000; --gold-text: #e0c38c; }
-        body { background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .card-custom { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .btn-red { background-color: var(--primary-red); color: white; border: none; }
-        .btn-red:hover { background-color: #a00000; color: white; }
-        /* 隐藏滚动条但保留滚动功能 */
-        ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+        body { min-height: 100vh; background-color: #f4f6f9; display: flex; }
+        
+        /* 侧边栏样式 */
+        #sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background: #343a40;
+            color: #fff;
+            transition: all 0.3s;
+            display: flex; flex-direction: column;
+        }
+        #sidebar .sidebar-header { padding: 20px; background: #343a40; border-bottom: 1px solid #4b545c; }
+        #sidebar ul.components { padding: 20px 0; border-bottom: 1px solid #4b545c; }
+        #sidebar ul li a { padding: 10px 20px; font-size: 1.1em; display: block; color: #c2c7d0; text-decoration: none; }
+        #sidebar ul li a:hover { color: #fff; background: #494e53; }
+        #sidebar ul li.active > a { background: #007bff; color: #fff; }
+        
+        /* 内容区样式 */
+        #content { width: 100%; padding: 20px; min-height: 100vh; transition: all 0.3s; }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            #sidebar { margin-left: -250px; }
+            #sidebar.active { margin-left: 0; }
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
 <body>
 
-    <div class="main-content">
+    {% if user and user.is_admin %}
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <h3>🦄 红白悬赏</h3>
+            <div class="small text-muted">V3.0 Enterprise</div>
+        </div>
+
+        <ul class="list-unstyled components">
+            <li><a href="/admin/dashboard"><i class="fas fa-tachometer-alt me-2"></i> 数据看板</a></li>
+            <li><a href="/admin/materials"><i class="fas fa-images me-2"></i> 素材弹药库</a></li>
+            <li><a href="/admin/audit"><i class="fas fa-check-circle me-2"></i> 任务审核</a></li>
+            <li><a href="/admin/deposit/list"><i class="fas fa-wallet me-2"></i> 财务管理</a></li>
+            <li><a href="/admin/users"><i class="fas fa-users me-2"></i> 会员风控</a></li>
+            <li><a href="/admin/audit_logs"><i class="fas fa-history me-2"></i> 审计日志</a></li>
+            <li><a href="/admin/settings"><i class="fas fa-cogs me-2"></i> 系统设置</a></li>
+        </ul>
+        
+        <div class="mt-auto p-3">
+             <a href="/logout" class="btn btn-danger w-100"><i class="fas fa-sign-out-alt"></i> 退出登录</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4 rounded">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-dark d-inline-block d-lg-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="ms-auto d-flex align-items-center">
+                    {% if user %}
+                        <span class="me-3">欢迎, <strong>{{ user.username }}</strong></span>
+                        {% if not user.is_admin %}
+                        <a href="/logout" class="btn btn-sm btn-outline-danger">退出</a>
+                        {% endif %}
+                    {% else %}
+                        <a href="/login" class="btn btn-primary btn-sm">登录</a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+
         {% block content %}{% endblock %}
     </div>
 
-    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3">
-        <div id="globalToast" class="toast align-items-center text-white bg-dark border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body" id="toastBody"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        // 🟢 全局防连点逻辑
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', function() {
-                const btn = this.querySelector('button[type="submit"]');
-                if (btn) {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 处理中...';
+        $(document).ready(function () {
+            $('#sidebarCollapse').on('click', function () {
+                $('#sidebar').toggleClass('active');
+            });
+            
+            // 全局 Ajax 错误处理
+            $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+                if (jqxhr.status == 401) {
+                    Swal.fire('登录过期', '请重新登录', 'warning').then(() => window.location.href='/login');
+                } else {
+                    Swal.fire('系统错误', '操作失败，请重试', 'error');
                 }
             });
         });
-
-        // 解析 URL 中的 msg 参数
-        const urlParams = new URLSearchParams(window.location.search);
-        const msg = urlParams.get('msg');
-        if (msg) {
-            const toastEl = document.getElementById('globalToast');
-            document.getElementById('toastBody').innerText = decodeURIComponent(msg);
-            new bootstrap.Toast(toastEl, { delay: 3000 }).show();
-            // 清理 URL，防止刷新再次弹出
-            window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // 通用 API 调用封装
+        function apiPost(url, data, successCb) {
+            $.post(url, data, function(res) {
+                if (res.code === 200) {
+                    Swal.fire({
+                        title: '成功',
+                        text: res.message,
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        if(successCb) successCb(res);
+                        else window.location.reload();
+                    });
+                } else {
+                    Swal.fire('失败', res.message, 'error');
+                }
+            });
         }
     </script>
     {% block scripts %}{% endblock %}

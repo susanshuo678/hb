@@ -1,4 +1,4 @@
-import shutil, uuid, os, urllib.parse, string, random, logging
+import shutil, uuid, os, urllib.parse, string, random, logging, json
 from io import BytesIO
 from fastapi import FastAPI, Depends, Request, Form, status, UploadFile, File, Response
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +19,7 @@ from . import models, auth
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 🟢 优化数据库连接：增加超时时间到 60s，防止后台卡死
+# 数据库连接配置
 SQLALCHEMY_DATABASE_URL = "sqlite:///./app/database/bounty.db"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
@@ -47,6 +47,20 @@ def create_notification(db: Session, user_id: int, title: str, content: str, msg
     note = models.Notification(user_id=user_id, title=title, content=content, type=msg_type)
     db.add(note)
 
+# 同步保存函数
+def save_upload_file_sync(file: UploadFile) -> str:
+    try:
+        os.makedirs("app/static/uploads", exist_ok=True)
+        ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        name = f"{uuid.uuid4()}.{ext}"
+        path = f"app/static/uploads/{name}"
+        with open(path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return f"/static/uploads/{name}"
+    except Exception as e:
+        logger.error(f"File Save Error: {e}")
+        return ""
+
 # --- 初始化 ---
 @app.on_event("startup")
 def init_db_data():
@@ -59,7 +73,6 @@ def init_db_data():
                 models.TaskCategory(name="其他任务", code="other", icon="📂", color="dark", sort_order=0),
             ]
             db.add_all(defaults)
-        
         if db.query(models.VipPlan).count() == 0:
             plans = [
                 models.VipPlan(name="月卡会员", days=30, price=29.9, bonus_rate=10),
@@ -67,7 +80,6 @@ def init_db_data():
                 models.VipPlan(name="年卡至尊", days=365, price=199.9, bonus_rate=20),
             ]
             db.add_all(plans)
-            
         configs = {
             "announcement": "📢 欢迎来到红白悬赏平台，请文明做单，诚信互助！",
             "commission_rate": "10",
@@ -83,7 +95,6 @@ def init_db_data():
         db.close()
 
 # --- 基础路由 ---
-
 @app.get("/captcha")
 def get_captcha(request: Request):
     image = ImageCaptcha(width=120, height=50) 
@@ -105,12 +116,10 @@ def register(request: Request, username: str = Form(...), password: str = Form(.
         return templates.TemplateResponse("register.html", {"request": request, "error": "验证码错误", "invite_code": invite_code})
     if db.query(models.User).filter(models.User.username == username).first():
         return templates.TemplateResponse("register.html", {"request": request, "error": "用户名已存在"})
-    
     inviter_id = None
     if invite_code:
         inviter = db.query(models.User).filter(models.User.id == invite_code).first()
         if inviter: inviter_id = inviter.id
-        
     new_user = models.User(username=username, hashed_password=auth.get_password_hash(password), inviter_id=inviter_id)
     db.add(new_user)
     db.commit()
@@ -138,15 +147,12 @@ def logout():
     return resp
 
 # --- H5 业务 ---
-
 @app.get("/h5/index", response_class=HTMLResponse)
 def h5_index(request: Request, cat: Optional[str] = "all", user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login")
     query = db.query(models.Task).filter(models.Task.is_active == True)
     if cat and cat != "all": query = query.filter(models.Task.category == cat)
     tasks = query.order_by(models.Task.id.desc()).all()
-    
-    # 检查素材库存
     available_tasks = []
     for t in tasks:
         if t.material_category_id:
@@ -154,7 +160,6 @@ def h5_index(request: Request, cat: Optional[str] = "all", user: Optional[models
             if count > 0: available_tasks.append(t)
         else:
             available_tasks.append(t)
-            
     announcement = db.query(models.SystemConfig).filter(models.SystemConfig.key == "announcement").first()
     return templates.TemplateResponse("h5/index.html", {
         "request": request, "user": user, "tasks": available_tasks, 
@@ -197,11 +202,9 @@ def h5_settings(request: Request, user: Optional[models.User] = Depends(get_curr
 
 @app.post("/h5/settings/avatar")
 def h5_avatar(file: UploadFile = File(...), user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
-    ext = file.filename.split(".")[-1]
-    name = f"av_{uuid.uuid4()}.{ext}"
-    with open(f"app/static/uploads/{name}", "wb") as b: shutil.copyfileobj(file.file, b)
-    user.avatar = f"/static/uploads/{name}"
-    db.commit()
+    if file and file.filename:
+        user.avatar = save_upload_file_sync(file)
+        db.commit()
     return RedirectResponse("/h5/settings", status_code=302)
 
 @app.get("/h5/vip", response_class=HTMLResponse)
@@ -227,114 +230,65 @@ def h5_recharge(request: Request, user: Optional[models.User] = Depends(get_curr
 
 @app.post("/h5/recharge/submit")
 def h5_recharge_sub(amount: float = Form(...), file: UploadFile = File(...), user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
-    ext = file.filename.split(".")[-1]
-    name = f"pay_{uuid.uuid4()}.{ext}"
-    with open(f"app/static/uploads/{name}", "wb") as b: shutil.copyfileobj(file.file, b)
-    db.add(models.Deposit(user_id=user.id, amount=amount, proof_img=f"/static/uploads/{name}", status="pending"))
+    path = save_upload_file_sync(file)
+    db.add(models.Deposit(user_id=user.id, amount=amount, proof_img=path, status="pending"))
     db.commit()
     return RedirectResponse("/h5/mine?msg=" + urllib.parse.quote("充值已提交审核"), status_code=302)
 
-# 🟢 修复：任务详情页，防止未抢单状态下报错
 @app.get("/h5/task/{task_id}", response_class=HTMLResponse)
 def h5_task_detail(task_id: int, request: Request, user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
-    if not task: return RedirectResponse("/h5/index") # 防止ID不存在报错
-
+    if not task: return RedirectResponse("/h5/index") 
     existing_sub = db.query(models.Submission).filter(
         models.Submission.user_id == user.id,
         models.Submission.task_id == task_id,
         models.Submission.status.in_(['pending', 'approved', 'pending_upload']) 
     ).first()
-    
     assigned_material = None
     if existing_sub and existing_sub.assigned_material_id:
         assigned_material = db.query(models.Material).filter(models.Material.id == existing_sub.assigned_material_id).first()
-
     return templates.TemplateResponse("h5/detail.html", {
         "request": request, "user": user, "task": task,
         "existing_sub": existing_sub,
         "assigned_material": assigned_material
     })
 
-# 🟢 修复：抢单接口，增加 dummy 参数防止解析 body 失败
 @app.post("/h5/task/{task_id}/grab")
-def h5_task_grab(
-    task_id: int, 
-    request: Request,  # 显式接收 Request 对象
-    user: Optional[models.User] = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
+def h5_task_grab(task_id: int, request: Request, user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if not task: return RedirectResponse("/h5/index")
-
-    # 检查是否已抢
     if db.query(models.Submission).filter(models.Submission.user_id == user.id, models.Submission.task_id == task_id).first():
         return RedirectResponse(f"/h5/task/{task_id}", status_code=302)
-
     material = None
     if task.material_category_id:
-        # 悲观锁逻辑：找素材
-        material = db.query(models.Material).filter(
-            models.Material.category_id == task.material_category_id,
-            models.Material.status == "unused"
-        ).first()
-        
+        material = db.query(models.Material).filter(models.Material.category_id == task.material_category_id, models.Material.status == "unused").first()
         if not material:
             return RedirectResponse(f"/h5/task/{task_id}?msg=" + urllib.parse.quote("手慢了，素材已领完"), status_code=302)
-        
         material.status = "locked"
         material.used_by_user_id = user.id
         material.used_at = datetime.now()
-        
         cat = db.query(models.MaterialCategory).filter(models.MaterialCategory.id == task.material_category_id).first()
         cat.used_count += 1
-
-    sub = models.Submission(
-        user_id=user.id, 
-        task_id=task_id, 
-        status="pending_upload", 
-        assigned_material_id=material.id if material else None
-    )
+    sub = models.Submission(user_id=user.id, task_id=task_id, status="pending_upload", assigned_material_id=material.id if material else None)
     db.add(sub)
     db.commit()
-    
     return RedirectResponse(f"/h5/task/{task_id}", status_code=302)
 
-# 🟢 修复：提交接口，确保 multipart 解析正常
 @app.post("/h5/task/{task_id}/submit")
-async def h5_task_submit(
-    task_id: int, 
-    request: Request,
-    post_link: Optional[str] = Form(None), 
-    file: Optional[UploadFile] = File(None), 
-    user: Optional[models.User] = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
-    sub = db.query(models.Submission).filter(
-        models.Submission.user_id == user.id, 
-        models.Submission.task_id == task_id
-    ).first()
-    
+def h5_task_submit(task_id: int, request: Request, post_link: Optional[str] = Form(None), file: Optional[UploadFile] = File(None), user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
+    sub = db.query(models.Submission).filter(models.Submission.user_id == user.id, models.Submission.task_id == task_id).first()
     if not sub:
         sub = models.Submission(user_id=user.id, task_id=task_id, status="pending")
         db.add(sub)
-    
     path = None
     if file and file.filename:
-        # 确保目录存在
-        os.makedirs("app/static/uploads", exist_ok=True)
-        name = f"sub_{uuid.uuid4()}.{file.filename.split('.')[-1]}"
-        with open(f"app/static/uploads/{name}", "wb") as b: shutil.copyfileobj(file.file, b)
-        path = f"/static/uploads/{name}"
-    
+        path = save_upload_file_sync(file)
     sub.screenshot_path = path
     sub.post_link = post_link
-    sub.status = "pending" # 转为待审核
-    
+    sub.status = "pending"
     if sub.assigned_material_id:
         mat = db.query(models.Material).filter(models.Material.id == sub.assigned_material_id).first()
         if mat: mat.status = "used"
-
     db.commit()
     return RedirectResponse("/h5/mine?msg=" + urllib.parse.quote("提交成功"), status_code=302)
 
@@ -369,44 +323,29 @@ def h5_pwd_post(old_password: str = Form(...), new_password: str = Form(...), co
     return RedirectResponse("/login?msg=" + urllib.parse.quote("修改成功请登录"), status_code=302)
 
 # --- Admin Routes ---
-
-# 🟢 优化：后台看板防卡死处理
 @app.get("/admin/dashboard", response_class=HTMLResponse)
 def admin_dash(request: Request, user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user or not user.is_admin: return RedirectResponse("/h5/index")
-    
     try:
-        # 简单统计
         stats = {
             "pending_audit": db.query(models.Submission).filter(models.Submission.status == "pending").count(),
             "users": db.query(models.User).count(),
             "active_tasks": db.query(models.Task).filter(models.Task.is_active == True).count(),
             "pending_withdraw": db.query(models.Withdrawal).filter(models.Withdrawal.status == "pending").count()
         }
-        
-        # 图表数据 - 增加异常捕获，防止一个查询卡死整个页面
         dates, u_data, s_data, m_data = [], [], [], []
         today = datetime.now().date()
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
             dates.append(d.strftime("%m-%d"))
-            
-            # 使用 scalar() 稍微快一点
-            u_cnt = db.query(func.count(models.User.id)).filter(models.User.created_at >= d, models.User.created_at < d + timedelta(days=1)).scalar()
-            u_data.append(u_cnt)
-            
-            s_cnt = db.query(func.count(models.Submission.id)).filter(models.Submission.created_at >= d, models.Submission.created_at < d + timedelta(days=1)).scalar()
-            s_data.append(s_cnt)
-            
+            u_data.append(db.query(func.count(models.User.id)).filter(models.User.created_at >= d, models.User.created_at < d + timedelta(days=1)).scalar())
+            s_data.append(db.query(func.count(models.Submission.id)).filter(models.Submission.created_at >= d, models.Submission.created_at < d + timedelta(days=1)).scalar())
             m_sum = db.query(func.sum(models.Withdrawal.amount)).filter(models.Withdrawal.status == "paid", models.Withdrawal.created_at >= d, models.Withdrawal.created_at < d + timedelta(days=1)).scalar() or 0
             m_data.append(m_sum)
-            
     except Exception as e:
         logger.error(f"Dashboard Error: {e}")
-        # 如果报错，给空数据，保证页面能打开
         stats = { "pending_audit": 0, "users": 0, "active_tasks": 0, "pending_withdraw": 0 }
         dates, u_data, s_data, m_data = [], [], [], []
-
     return templates.TemplateResponse("admin/dashboard.html", {
         "request": request, "user": user, "stats": stats, 
         "chart_dates": dates, "chart_users": u_data, "chart_subs": s_data, "chart_money": m_data
@@ -424,28 +363,66 @@ def admin_mat_cat_new(name: str = Form(...), db: Session = Depends(get_db)):
     return RedirectResponse("/admin/materials", status_code=302)
 
 @app.post("/admin/materials/upload")
-async def admin_mat_upload(cat_id: int = Form(...), files: List[UploadFile] = File(None), texts: str = Form(""), db: Session = Depends(get_db)):
-    text_list = [line.strip() for line in texts.split('\n') if line.strip()]
-    saved_files = []
-    if files:
-        for file in files:
-            if file.filename:
-                name = f"mat_{uuid.uuid4()}.{file.filename.split('.')[-1]}"
-                with open(f"app/static/uploads/{name}", "wb") as b: shutil.copyfileobj(file.file, b)
-                saved_files.append(f"/static/uploads/{name}")
+def admin_mat_upload(cat_id: int = Form(...), files: List[UploadFile] = File(...), metadata_json: str = Form(...), db: Session = Depends(get_db)):
+    try:
+        meta_list = json.loads(metadata_json)
+    except:
+        meta_list = []
     count = 0
-    max_len = max(len(text_list), len(saved_files))
-    if max_len == 0: return RedirectResponse("/admin/materials", status_code=302)
-    for i in range(max_len):
-        content = text_list[i % len(text_list)] if text_list else ""
-        image = saved_files[i % len(saved_files)] if saved_files else ""
-        mat = models.Material(category_id=cat_id, content=content, images=image)
-        db.add(mat)
-        count += 1
+    if not files: return {"status": "error", "message": "No files received"}
+    loop_count = min(len(files), len(meta_list))
+    for i in range(loop_count):
+        file = files[i]
+        meta = meta_list[i]
+        if file.filename:
+            path = save_upload_file_sync(file)
+            mat = models.Material(category_id=cat_id, title=meta.get('title', '无标题'), content=meta.get('content', ''), images=path)
+            db.add(mat)
+            count += 1
     cat = db.query(models.MaterialCategory).filter(models.MaterialCategory.id == cat_id).first()
-    cat.total_count += count
+    if cat: cat.total_count += count
     db.commit()
-    return RedirectResponse(f"/admin/materials?msg=成功添加{count}条素材", status_code=302)
+    return {"status": "success", "count": count}
+
+# 🟢 1. 获取素材列表接口 (用于前端预览)
+@app.get("/admin/materials/list/{cat_id}")
+def admin_materials_list(cat_id: int, user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user or not user.is_admin: return []
+    # 倒序排列，新上传的在前
+    mats = db.query(models.Material).filter(models.Material.category_id == cat_id).order_by(models.Material.id.desc()).all()
+    return [{"id": m.id, "title": m.title, "content": m.content, "images": m.images, "status": m.status} for m in mats]
+
+# 🟢 2. 删除素材接口
+@app.post("/admin/materials/delete")
+def admin_material_delete(mat_id: int = Form(...), db: Session = Depends(get_db)):
+    mat = db.query(models.Material).filter(models.Material.id == mat_id).first()
+    if mat:
+        # 减少分类计数
+        cat = db.query(models.MaterialCategory).filter(models.MaterialCategory.id == mat.category_id).first()
+        if cat and cat.total_count > 0:
+            cat.total_count -= 1
+        
+        # 删除数据库记录 (物理图片文件暂时保留，避免复杂)
+        db.delete(mat)
+        db.commit()
+        return {"status": "success"}
+    return {"status": "error"}
+    
+# 🟢 3. 更新素材接口 (新增)
+@app.post("/admin/materials/update")
+def admin_material_update(
+    mat_id: int = Form(...), 
+    title: str = Form(...), 
+    content: str = Form(...), 
+    db: Session = Depends(get_db)
+):
+    mat = db.query(models.Material).filter(models.Material.id == mat_id).first()
+    if mat:
+        mat.title = title
+        mat.content = content
+        db.commit()
+        return {"status": "success"}
+    return {"status": "error", "message": "素材不存在"}
 
 @app.get("/admin/settings", response_class=HTMLResponse)
 def admin_settings(request: Request, user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -462,10 +439,7 @@ def admin_settings(request: Request, user: Optional[models.User] = Depends(get_c
 
 @app.post("/admin/settings/paycode")
 def admin_paycode(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    ext = file.filename.split(".")[-1]
-    name = f"pay_{uuid.uuid4()}.{ext}"
-    with open(f"app/static/uploads/{name}", "wb") as b: shutil.copyfileobj(file.file, b)
-    path = f"/static/uploads/{name}"
+    path = save_upload_file_sync(file)
     obj = db.query(models.SystemConfig).filter(models.SystemConfig.key == "pay_qrcode").first()
     if obj: obj.value = path
     else: db.add(models.SystemConfig(key="pay_qrcode", value=path))
@@ -474,10 +448,8 @@ def admin_paycode(file: UploadFile = File(...), db: Session = Depends(get_db)):
 
 @app.post("/admin/settings/banner")
 def admin_banner(file: UploadFile = File(...), val: str = Form(None), db: Session = Depends(get_db)):
-    ext = file.filename.split(".")[-1]
-    name = f"ban_{uuid.uuid4()}.{ext}"
-    with open(f"app/static/uploads/{name}", "wb") as b: shutil.copyfileobj(file.file, b)
-    db.add(models.Banner(image_path=f"/static/uploads/{name}", link_url=val))
+    path = save_upload_file_sync(file)
+    db.add(models.Banner(image_path=path, link_url=val))
     db.commit()
     return RedirectResponse("/admin/settings?msg=" + urllib.parse.quote("上传成功"), status_code=302)
 
@@ -544,32 +516,20 @@ def admin_task_create(
 ):
     path = None
     if file and file.filename:
-        os.makedirs("app/static/uploads", exist_ok=True) # 确保目录存在
-        name = f"ex_{uuid.uuid4()}.{file.filename.split('.')[-1]}"
-        with open(f"app/static/uploads/{name}", "wb") as b: shutil.copyfileobj(file.file, b)
-        path = f"/static/uploads/{name}"
-    
+        path = save_upload_file_sync(file)
     final_reward_desc = ""
     final_desc = description
-
     if price_mode == "fixed":
         final_reward_desc = f"{price}"
     else:
         final_reward_desc = reward_desc_input if reward_desc_input else "审核定价"
         if pricing_rule:
             final_desc = f"【💰 定价规则】\n{pricing_rule}\n\n【📝 任务详情】\n{description}"
-
     db.add(models.Task(
-        title=title, 
-        price=price, 
-        reward_desc=final_reward_desc,
-        price_mode=price_mode,
-        material_category_id=material_cat_id if material_cat_id > 0 else None,
-        description=final_desc, 
-        category=category, 
-        example_image_path=path, 
-        text_req=text_req, 
-        image_req=image_req
+        title=title, price=price, reward_desc=final_reward_desc,
+        price_mode=price_mode, material_category_id=material_cat_id if material_cat_id > 0 else None,
+        description=final_desc, category=category, example_image_path=path, 
+        text_req=text_req, image_req=image_req
     ))
     db.commit()
     return RedirectResponse("/admin/dashboard?msg=" + urllib.parse.quote("发布成功"), status_code=302)
@@ -595,28 +555,20 @@ def admin_review(submission_id: int = Form(...), action: str = Form(...), feedba
     sub = db.query(models.Submission).filter(models.Submission.id == submission_id).first()
     if action == "approve":
         reward = 0
-        if sub.task.price_mode == 'dynamic':
-            reward = amount
+        if sub.task.price_mode == 'dynamic': reward = amount
         else:
             reward = sub.task.price
-            if sub.user.vip_end_time and sub.user.vip_end_time > datetime.now():
-                reward = round(reward * 1.1, 2)
-        sub.status = "approved"
-        sub.user.balance += reward
-        sub.final_amount = reward
-        sub.user.credit_score = min(100, sub.user.credit_score + 1)
+            if sub.user.vip_end_time and sub.user.vip_end_time > datetime.now(): reward = round(reward * 1.1, 2)
+        sub.status = "approved"; sub.user.balance += reward; sub.final_amount = reward; sub.user.credit_score = min(100, sub.user.credit_score + 1)
         create_notification(db, sub.user.id, "审核通过", f"任务【{sub.task.title}】已通过，获得 {reward} 元")
         if sub.user.inviter_id:
             inviter = db.query(models.User).filter(models.User.id == sub.user.inviter_id).first()
             if inviter:
                 rate = float(db.query(models.SystemConfig).filter(models.SystemConfig.key == "commission_rate").first().value)
                 comm = round(reward * (rate/100), 2)
-                inviter.balance += comm
-                create_notification(db, inviter.id, "推广提成", f"下级完成任务，获得 {comm} 元")
+                inviter.balance += comm; create_notification(db, inviter.id, "推广提成", f"下级完成任务，获得 {comm} 元")
     else:
-        sub.status = "rejected"
-        sub.admin_feedback = feedback
-        sub.user.credit_score = max(0, sub.user.credit_score - 10)
+        sub.status = "rejected"; sub.admin_feedback = feedback; sub.user.credit_score = max(0, sub.user.credit_score - 10)
         create_notification(db, sub.user.id, "审核驳回", feedback)
     db.commit()
     return RedirectResponse("/admin/audit", status_code=302)
@@ -652,7 +604,6 @@ def admin_bal(user_id: int = Form(...), amount: float = Form(...), db: Session =
     db.commit()
     return RedirectResponse("/admin/users", status_code=302)
 
-# --- 保留的管理员接口 ---
 @app.get("/make_me_admin")
 def make_me_admin(user: Optional[models.User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return "请先登录普通账号，再访问此链接"
