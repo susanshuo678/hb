@@ -2,31 +2,42 @@ version: '3.8'
 
 services:
   db:
-    image: mariadb:10.6
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: bounty_root_pass
+      MYSQL_ROOT_PASSWORD: root_password_ChangeMe!
       MYSQL_DATABASE: bounty_db
-      MYSQL_USER: bounty_user
-      MYSQL_PASSWORD: bounty_password
     volumes:
-      - db_data:/var/lib/mysql
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+      - ./data/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: redis:6-alpine
+    restart: always
+    volumes:
+      - ./data/redis:/data
 
   web:
     build: .
-    container_name: bounty_platform
+    container_name: bounty_v3_app
     restart: always
     ports:
       - "9001:8000"
-    volumes:
-      - ./app/static/uploads:/app/app/static/uploads
     environment:
-      - SECRET_KEY=redpacket_bounty_secret_2026
-      # 连接到上面的 db 服务
-      - DATABASE_URL=mysql+pymysql://bounty_user:bounty_password@db/bounty_db
+      - DATABASE_URL=mysql+pymysql://root:root_password_ChangeMe!@db/bounty_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=bounty_v3_secret_key_2026
+    volumes:
+      # 🟢 关键修正：把本地 app 挂载到容器的 /app/app
+      - ./app:/app/app
+      # 挂载上传目录
+      - ./uploads:/app/app/static/uploads
     depends_on:
-      - db
-
-volumes:
-  db_data:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
