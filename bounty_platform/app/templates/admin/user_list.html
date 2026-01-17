@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}会员管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold"><i class="fas fa-users text-primary me-2"></i>会员管理</h4>
+        <a href="/admin/dashboard" class="btn btn-outline-secondary">返回看板</a>
+    </div>
+
+    <div class="card card-custom bg-white">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>上级ID</th>
+                            <th>当前余额</th>
+                            <th>提现账户 (支付宝)</th>
+                            <th>注册时间</th>
+                            <th class="text-end">资金操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>#{{ u.id }}</td>
+                            <td>
+                                <div class="fw-bold">{{ u.username }}</div>
+                                {% if u.is_admin %}
+                                <span class="badge bg-dark">管理员</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.inviter_id %}
+                                <span class="badge bg-info text-dark">上级: #{{ u.inviter_id }}</span>
+                                {% else %}
+                                <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold text-danger">¥ {{ "%.2f"|format(u.balance) }}</td>
+                            <td>
+                                {% if u.alipay_account %}
+                                    <div>{{ u.alipay_name }}</div>
+                                    <div class="small text-muted">{{ u.alipay_account }}</div>
+                                {% else %}
+                                    <span class="text-muted small">未绑定</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">{{ u.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-success" 
+                                        onclick="openBalanceModal('{{ u.id }}', '{{ u.username }}', '{{ u.balance }}')">
+                                    <i class="fas fa-coins"></i> 充值/扣款
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="balanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/admin/users/balance" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">💰 人工资金调整</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>正在操作用户：<strong id="modalUsername" class="text-primary"></strong> (ID: <span id="modalUserIdDisplay"></span>)</p>
+                    <p class="small text-muted">当前余额：¥ <span id="modalCurrentBalance"></span></p>
+                    
+                    <input type="hidden" name="user_id" id="modalUserId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">变动金额 (支持负数)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">¥</span>
+                            <input type="number" step="0.01" name="amount" class="form-control" placeholder="输入正数加钱，输入负数扣钱" required>
+                        </div>
+                        <div class="form-text text-danger">
+                            例如：输入 <strong>10</strong> 表示奖励 10 元；输入 <strong>-5</strong> 表示扣除 5 元。
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">备注理由 (选填)</label>
+                        <input type="text" name="reason" class="form-control" placeholder="例如：新人红包补发">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">确认调整</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openBalanceModal(uid, username, balance) {
+        document.getElementById('modalUserId').value = uid;
+        document.getElementById('modalUserIdDisplay').innerText = uid;
+        document.getElementById('modalUsername').innerText = username;
+        document.getElementById('modalCurrentBalance').innerText = parseFloat(balance).toFixed(2);
+        
+        var myModal = new bootstrap.Modal(document.getElementById('balanceModal'));
+        myModal.show();
+    }
+</script>
+{% endblock %}

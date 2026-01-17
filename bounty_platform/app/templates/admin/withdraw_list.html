@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}提现审核{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">💸 提现审核</h4>
+        
+        <div>
+            <a href="/admin/withdraw/export?status=pending" class="btn btn-success me-2">
+                <i class="fas fa-file-excel me-1"></i> 导出待打款
+            </a>
+            <a href="/admin/dashboard" class="btn btn-outline-secondary">返回后台</a>
+        </div>
+    </div>
+
+    <div class="card card-custom bg-white">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>申请人</th>
+                            <th>提现金额</th>
+                            <th>收款信息</th>
+                            <th>申请时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for w in withdrawals %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold">{{ w.user.username }}</div>
+                                <div class="small text-muted">UID: {{ w.user_id }}</div>
+                            </td>
+                            <td class="fw-bold text-danger fs-5">¥ {{ w.amount }}</td>
+                            <td>
+                                <div><i class="fab fa-alipay text-primary me-1"></i> {{ w.real_name }}</div>
+                                <div class="small text-muted font-monospace">{{ w.account }}</div>
+                            </td>
+                            <td class="small text-muted">{{ w.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if w.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">⏳ 待处理</span>
+                                {% elif w.status == 'paid' %}
+                                <span class="badge bg-success">✅ 已打款</span>
+                                {% else %}
+                                <span class="badge bg-secondary">❌ 已驳回</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if w.status == 'pending' %}
+                                <form action="/admin/withdraw/process" method="post" class="d-flex gap-2">
+                                    <input type="hidden" name="wid" value="{{ w.id }}">
+                                    <button name="action" value="paid" class="btn btn-sm btn-success" onclick="return confirm('确认已打款给用户？')">已打款</button>
+                                    <button name="action" value="reject" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定驳回并退款？')">驳回</button>
+                                </form>
+                                {% else %}
+                                <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

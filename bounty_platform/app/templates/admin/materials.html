@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}素材库管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">🎒 素材弹药库</h4>
+        <div>
+            <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#newCatModal">
+                <i class="fas fa-folder-plus"></i> 新建分类
+            </button>
+            <a href="/admin/dashboard" class="btn btn-outline-secondary">返回后台</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="list-group shadow-sm">
+                {% for cat in categories %}
+                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="selectCat('{{ cat.id }}', '{{ cat.name }}')">
+                    <div>
+                        <div class="fw-bold">{{ cat.name }}</div>
+                        <small class="text-muted">总数: {{ cat.total_count }} | 已领: {{ cat.used_count }}</small>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted"></i>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card card-custom bg-white p-4" id="uploadCard" style="display: none;">
+                <h5 class="fw-bold mb-3">📂 正在管理：<span id="currentCatName" class="text-primary"></span></h5>
+                
+                <form action="/admin/materials/upload" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="cat_id" id="currentCatId">
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">1. 批量选择图片 (可多选)</label>
+                        <input type="file" name="files" class="form-control" multiple accept="image/*">
+                        <div class="form-text">支持一次性选择 10 张、100 张图片，系统将自动生成素材条目。</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">2. 批量输入文案</label>
+                        <textarea name="texts" class="form-control" rows="10" placeholder="第一行文案...
+第二行文案...
+第三行文案...
+
+(每行将作为一条独立的文案素材，系统会自动将图片和文案进行配对组合)"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold">🚀 开始批量导入</button>
+                </form>
+            </div>
+            
+            <div class="text-center py-5 text-muted" id="placeholder">
+                <i class="fas fa-arrow-left me-2"></i> 请先在左侧选择一个分类
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="newCatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/materials/category/new" method="post" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">新建分类</h5></div>
+            <div class="modal-body">
+                <input type="text" name="name" class="form-control" placeholder="例如：小红书3月第一批" required>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">创建</button></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function selectCat(id, name) {
+        document.getElementById('uploadCard').style.display = 'block';
+        document.getElementById('placeholder').style.display = 'none';
+        document.getElementById('currentCatName').innerText = name;
+        document.getElementById('currentCatId').value = id;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}任务详情{% endblock %}
+
+{% block content %}
+<div class="bg-white p-3 mb-3 border-bottom shadow-sm">
+    <h4 class="fw-bold">{{ task.title }}</h4>
+    <div class="d-flex justify-content-between text-muted small mt-2">
+        <span><i class="fas fa-tag me-1"></i>{{ task.category }}</span>
+        <span class="text-danger fw-bold fs-5">
+            {% if task.price_mode == 'dynamic' %}
+            ¥ 审核定价
+            {% else %}
+            ¥ {{ task.price }}
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+<div class="container pb-5">
+    
+    {% if not existing_sub %}
+    <div class="card card-custom bg-white p-4 text-center mb-3">
+        <i class="fas fa-stopwatch fa-3x text-warning mb-3"></i>
+        <h5>待领取任务</h5>
+        <p class="text-muted small">
+            {% if task.material_category_id %}
+            ⚠️ 本任务包含独家素材，领取后请尽快完成，勿占用资源。
+            {% else %}
+            请仔细阅读步骤后接单。
+            {% endif %}
+        </p>
+        <form action="/h5/task/{{ task.id }}/grab" method="post">
+            <button class="btn btn-danger w-100 rounded-pill py-3 fw-bold shadow">
+                🚀 立即抢单 / 领取素材
+            </button>
+        </form>
+    </div>
+    
+    <div class="card card-custom bg-white p-3 mb-3">
+        <h6 class="fw-bold border-bottom pb-2">任务步骤</h6>
+        <div class="text-muted small" style="white-space: pre-wrap;">{{ task.description }}</div>
+    </div>
+    
+    {% else %}
+        
+        {% if assigned_material %}
+        <div class="card card-custom border-danger mb-4" style="border: 2px dashed #dc3545;">
+            <div class="card-header bg-danger text-white fw-bold">
+                <i class="fas fa-gem me-1"></i> 您的专属素材
+            </div>
+            <div class="card-body">
+                {% if assigned_material.content %}
+                <div class="bg-light p-3 rounded mb-3 position-relative">
+                    <small class="text-muted d-block mb-1">专属文案 (点击复制)</small>
+                    <div id="copyText" class="fw-bold text-dark">{{ assigned_material.content }}</div>
+                    <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" onclick="copyContent()">
+                        复制
+                    </button>
+                </div>
+                {% endif %}
+                
+                {% if assigned_material.images %}
+                <small class="text-muted d-block mb-1">专属配图 (长按保存)</small>
+                <img src="{{ assigned_material.images }}" class="img-fluid rounded shadow-sm">
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card card-custom bg-white p-3">
+            <h5 class="fw-bold mb-3">📸 提交作业</h5>
+            <form action="/h5/task/{{ task.id }}/submit" method="post" enctype="multipart/form-data">
+                {% if task.text_req != 'none' %}
+                <div class="mb-3">
+                    <label class="form-label">填写信息</label>
+                    <textarea name="post_link" class="form-control" rows="2" placeholder="填写链接或备注" required></textarea>
+                </div>
+                {% endif %}
+                
+                {% if task.image_req != 'none' %}
+                <div class="mb-3">
+                    <label class="form-label">上传截图</label>
+                    <input type="file" name="file" class="form-control" accept="image/*" required>
+                </div>
+                {% endif %}
+                
+                <button type="submit" class="btn btn-success w-100 py-3 rounded-pill fw-bold">
+                    ✅ 确认提交
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+function copyContent() {
+    var text = document.getElementById("copyText").innerText;
+    navigator.clipboard.writeText(text).then(function() {
+        alert("文案已复制！");
+    });
+}
+</script>
+{% endblock %}

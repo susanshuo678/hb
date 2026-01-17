@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}发布新任务{% endblock %}
+{% block head %}<style>body { background-color: #f3f4f6; }</style>{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-9">
+            <h4 class="fw-bold mb-4">📝 发布任务</h4>
+            <div class="card card-custom p-4 bg-white">
+                <form action="/admin/task/new" method="post" enctype="multipart/form-data">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">任务标题</label>
+                            <input type="text" name="title" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">任务分类</label>
+                            <select name="category" class="form-select">
+                                {% for c in categories %}<option value="{{ c.code }}">{{ c.name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card bg-light border p-3 mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-success">结算模式</label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="price_mode" id="pm_fixed" value="fixed" checked onchange="toggleMode()">
+                                        <label class="form-check-label" for="pm_fixed">固定金额</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="price_mode" id="pm_dynamic" value="dynamic" onchange="toggleMode()">
+                                        <label class="form-check-label" for="pm_dynamic">审核时定价</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-8" id="fixedBox">
+                                <label class="form-label fw-bold">单价 (元)</label>
+                                <input type="number" step="0.01" name="price" id="inputPrice" class="form-control" placeholder="5.00">
+                                <div class="form-text">用户完成一单，直接发放此金额。</div>
+                            </div>
+
+                            <div class="col-md-8" id="dynamicBox" style="display:none;">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold">展示价格区间 (用于吸引眼球)</label>
+                                    <input type="text" name="reward_desc_input" id="inputRewardDesc" class="form-control" placeholder="例如：5-20元 / 上不封顶">
+                                </div>
+                                <div>
+                                    <label class="form-label fw-bold">定价规则说明 (让用户知道怎么多拿钱)</label>
+                                    <textarea name="pricing_rule" class="form-control" rows="2" placeholder="例如：基础注册5元，充值再送10元，截图清晰额外奖2元..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-warning-subtle border-warning p-3 mb-4">
+                        <label class="form-label fw-bold text-dark"><i class="fas fa-boxes me-1"></i> 绑定素材弹药库 (选填)</label>
+                        <div class="input-group">
+                            <select name="material_cat_id" class="form-select border-warning">
+                                <option value="0">🚫 不使用素材库 (用户自己找图)</option>
+                                {% for mc in mat_categories %}
+                                <option value="{{ mc.id }}">📦 {{ mc.name }} (剩余: {{ mc.total_count - mc.used_count }})</option>
+                                {% endfor %}
+                            </select>
+                            <a href="/admin/materials" target="_blank" class="btn btn-warning text-dark border-warning fw-bold">
+                                <i class="fas fa-plus-circle"></i> 去创建素材库
+                            </a>
+                        </div>
+                        <div class="form-text text-dark opacity-75">
+                            下拉框为空？请先点击右侧按钮去上传素材。绑定后，用户接单将自动领取一套“独家”图文，领完即止。
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">任务步骤说明</label>
+                        <textarea name="description" class="form-control" rows="5" required></textarea>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <label class="form-label small text-muted">文字验证</label>
+                            <select name="text_req" class="form-select form-select-sm">
+                                <option value="required">必填</option><option value="none">无需</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">截图验证</label>
+                            <select name="image_req" class="form-select form-select-sm">
+                                <option value="required">必填</option><option value="none">无需</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">发布上线</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleMode() {
+        var isDynamic = document.getElementById('pm_dynamic').checked;
+        var fixedBox = document.getElementById('fixedBox');
+        var dynamicBox = document.getElementById('dynamicBox');
+        
+        if (isDynamic) { 
+            fixedBox.style.display = 'none';
+            dynamicBox.style.display = 'block';
+            document.getElementById('inputPrice').value = 0; // 动态模式价格置0
+        } else { 
+            fixedBox.style.display = 'block';
+            dynamicBox.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

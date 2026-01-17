@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}推广赚钱{% endblock %}
+
+{% block head %}
+<style>
+    .invite-header {
+        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+        padding: 3rem 1rem; text-align: center; border-radius: 0 0 20px 20px;
+        margin-bottom: 2rem; color: #d00000;
+    }
+    .invite-card {
+        background: white; border-radius: 15px; padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1.5rem; text-align: center;
+    }
+    .link-box {
+        background: #f8f9fa; border: 1px dashed #ccc; padding: 10px;
+        border-radius: 8px; word-break: break-all; font-family: monospace;
+        margin: 1rem 0; font-size: 0.9rem;
+    }
+    .team-list { max-height: 300px; overflow-y: auto; text-align: left; }
+    .team-item {
+        display: flex; justify-content: space-between; padding: 10px 0;
+        border-bottom: 1px solid #eee; font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="invite-header">
+    <h2 class="fw-bold mb-2">邀请好友 躺赚提成</h2>
+    <p class="mb-0 opacity-75">好友做任务，您得 10% 永久提成</p>
+</div>
+
+<div class="invite-card mx-3" style="margin-top: -3rem;">
+    <h5 class="fw-bold">🚀 您的专属推广链接</h5>
+    <div class="link-box" id="inviteLink">
+        {{ base_url }}/register?invite={{ user.id }}
+    </div>
+    <button onclick="copyLink()" class="btn btn-red w-100 rounded-pill shadow-sm">
+        <i class="fas fa-copy me-1"></i> 复制链接去分享
+    </button>
+</div>
+
+<div class="invite-card mx-3">
+    <div class="d-flex justify-content-between mb-3">
+        <h5 class="fw-bold mb-0">👥 我的团队</h5>
+        <span class="badge bg-danger rounded-pill">{{ children|length }} 人</span>
+    </div>
+    
+    <div class="team-list">
+        {% for child in children %}
+        <div class="team-item">
+            <div>
+                <i class="fas fa-user text-muted me-2"></i>
+                <span class="fw-bold">{{ child.username }}</span>
+                <span class="text-muted small ms-1">(ID: {{ child.id }})</span>
+            </div>
+            <div class="text-muted small">
+                {{ child.created_at.strftime('%m-%d') }} 加入
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted small">
+            还没有邀请到好友，快去分享吧！
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="text-center mb-5">
+    <a href="/h5/mine" class="text-decoration-none text-muted">
+        <i class="fas fa-arrow-left me-1"></i> 返回个人中心
+    </a>
+</div>
+
+<div class="modal fade" id="copyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content text-center p-3">
+            <i class="fas fa-check-circle text-success fa-3x mb-2"></i>
+            <p class="mb-0 fw-bold">链接已复制！</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyLink() {
+        var copyText = document.getElementById("inviteLink");
+        var range = document.createRange();
+        range.selectNode(copyText);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand("copy");
+        window.getSelection().removeAllRanges();
+        
+        var myModal = new bootstrap.Modal(document.getElementById('copyModal'));
+        myModal.show();
+        setTimeout(function(){ myModal.hide(); }, 1500);
+    }
+</script>
+{% endblock %}

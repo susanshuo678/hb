@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}余额充值{% endblock %}
+
+{% block head %}
+<style>
+    .qr-box { background: white; padding: 2rem; border-radius: 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+    .qr-img { max-width: 200px; width: 100%; border: 1px solid #eee; border-radius: 8px; }
+    .step-num { width: 24px; height: 24px; background: #333; color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; margin-right: 8px; }
+    .upload-area { border: 2px dashed #ddd; border-radius: 12px; padding: 2rem; text-align: center; color: #999; cursor: pointer; background: #fafafa; transition: all 0.2s; }
+    .upload-area:active { background: #f0f0f0; border-color: #999; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/h5/mine" class="text-dark text-decoration-none me-3"><i class="fas fa-arrow-left fa-lg"></i></a>
+        <h5 class="fw-bold mb-0">余额充值</h5>
+    </div>
+
+    <h6 class="fw-bold mb-3"><span class="step-num">1</span>扫码支付</h6>
+    <div class="qr-box">
+        {% if pay_qrcode %}
+        <img src="{{ pay_qrcode }}" class="qr-img mb-2">
+        <p class="text-muted small mb-0">请使用支付宝/微信扫码支付</p>
+        <p class="text-danger fw-bold small">付款时请备注您的用户名：{{ user.username }}</p>
+        {% else %}
+        <p class="text-muted">管理员暂未配置收款码</p>
+        {% endif %}
+    </div>
+
+    <h6 class="fw-bold mb-3"><span class="step-num">2</span>提交凭证</h6>
+    <div class="card card-custom bg-white border-0 shadow-sm p-3">
+        <form action="/h5/recharge/submit" method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted">充值金额 (元)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 fw-bold">¥</span>
+                    <input type="number" name="amount" step="0.01" class="form-control border-start-0 ps-0" placeholder="0.00" required>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label small fw-bold text-muted">上传支付截图</label>
+                <div class="upload-area" onclick="document.getElementById('proofInput').click()">
+                    <i class="fas fa-image fa-2x mb-2"></i>
+                    <div id="uploadText">点击上传付款成功的截图</div>
+                </div>
+                <input type="file" name="file" id="proofInput" accept="image/*" class="d-none" onchange="previewFile()" required>
+            </div>
+            
+            <div class="d-grid">
+                <button type="submit" class="btn btn-dark rounded-pill py-2 fw-bold">提交审核</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="alert alert-warning border-0 bg-warning-subtle small mt-4">
+        <i class="fas fa-info-circle me-1"></i> 温馨提示：提交后，财务将在 10-30 分钟内完成审核入账，请耐心等待。
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function previewFile() {
+        var file = document.getElementById('proofInput').files[0];
+        if (file) {
+            document.getElementById('uploadText').innerText = "✅ 已选择: " + file.name;
+            document.querySelector('.upload-area').style.borderColor = '#28a745';
+            document.querySelector('.upload-area').style.color = '#28a745';
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>{% block title %}{% endblock %} - 红白悬赏</title>
+    
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    
+    <style>
+        :root { --primary-red: #d00000; --gold-text: #e0c38c; }
+        body { background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .card-custom { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .btn-red { background-color: var(--primary-red); color: white; border: none; }
+        .btn-red:hover { background-color: #a00000; color: white; }
+        /* 隐藏滚动条但保留滚动功能 */
+        ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3">
+        <div id="globalToast" class="toast align-items-center text-white bg-dark border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body" id="toastBody"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 🟢 全局防连点逻辑
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function() {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 处理中...';
+                }
+            });
+        });
+
+        // 解析 URL 中的 msg 参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const msg = urlParams.get('msg');
+        if (msg) {
+            const toastEl = document.getElementById('globalToast');
+            document.getElementById('toastBody').innerText = decodeURIComponent(msg);
+            new bootstrap.Toast(toastEl, { delay: 3000 }).show();
+            // 清理 URL，防止刷新再次弹出
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

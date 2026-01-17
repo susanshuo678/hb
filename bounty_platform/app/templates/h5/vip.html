@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}会员中心{% endblock %}
+
+{% block head %}
+<style>
+    /* 黑金风格 */
+    .vip-header {
+        background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
+        color: #e0c38c; padding: 2rem 1.5rem 4rem;
+        border-radius: 0 0 20px 20px; position: relative; overflow: hidden;
+    }
+    .vip-header::after {
+        content: ""; position: absolute; top: -50px; right: -50px;
+        width: 150px; height: 150px; background: rgba(255, 215, 0, 0.1);
+        border-radius: 50%; filter: blur(20px);
+    }
+    .vip-badge {
+        background: linear-gradient(90deg, #ffd700, #ffaa00);
+        color: #333; padding: 2px 8px; border-radius: 4px; 
+        font-size: 0.75rem; font-weight: bold; margin-left: 5px;
+    }
+    
+    .plan-container {
+        margin-top: -3rem; padding: 0 1rem;
+    }
+    .plan-card {
+        background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative;
+        border: 2px solid transparent; transition: all 0.2s;
+    }
+    .plan-card.active { border-color: #e0c38c; background: #fffdf5; }
+    
+    .buy-btn {
+        background: linear-gradient(90deg, #d4af37, #c5a028);
+        color: white; font-weight: bold; border: none;
+    }
+    
+    .benefit-grid { display: flex; justify-content: space-between; margin-top: 2rem; }
+    .benefit-item { text-align: center; color: #666; font-size: 0.8rem; }
+    .benefit-icon { 
+        width: 45px; height: 45px; border-radius: 50%; background: #fff5d1; 
+        color: #d4af37; display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 0.5rem; font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="vip-header">
+    <a href="/h5/mine" class="text-white position-absolute top-0 start-0 m-3 text-decoration-none" style="z-index: 10;">
+        <i class="fas fa-arrow-left fa-lg"></i>
+    </a>
+
+    <div class="d-flex align-items-center">
+        <img src="{{ user.avatar or '/static/img/default_avatar.png' }}" class="rounded-circle border border-warning" style="width: 50px; height: 50px; object-fit: cover;">
+        <div class="ms-3">
+            <h5 class="mb-1 fw-bold text-white">
+                {{ user.username }}
+                {% if is_vip %}
+                <span class="vip-badge"><i class="fas fa-crown"></i> VIP</span>
+                {% else %}
+                <span class="badge bg-secondary small">普通用户</span>
+                {% endif %}
+            </h5>
+            <div class="small opacity-75">
+                {% if is_vip %}
+                会员有效期至：{{ user.vip_end_time.strftime('%Y-%m-%d') }}
+                {% else %}
+                开通VIP，任务奖励提升 <span class="text-warning fw-bold">10%-20%</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="benefit-grid">
+        <div class="benefit-item">
+            <div class="benefit-icon"><i class="fas fa-coins"></i></div>
+            <div>佣金加成</div>
+        </div>
+        <div class="benefit-item">
+            <div class="benefit-icon"><i class="fas fa-crown"></i></div>
+            <div>尊贵标识</div>
+        </div>
+        <div class="benefit-item">
+            <div class="benefit-icon"><i class="fas fa-shipping-fast"></i></div>
+            <div>优先审核</div>
+        </div>
+        <div class="benefit-item">
+            <div class="benefit-icon"><i class="fas fa-headset"></i></div>
+            <div>专属客服</div>
+        </div>
+    </div>
+</div>
+
+<div class="plan-container pb-5">
+    <h5 class="fw-bold mb-3 mt-4">选择套餐</h5>
+    
+    {% for plan in plans %}
+    <div class="plan-card" onclick="selectPlan('{{ plan.id }}')">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="fw-bold mb-1">{{ plan.name }}</h5>
+                <p class="text-muted small mb-0">做单奖励加成 <span class="text-danger fw-bold">+{{ plan.bonus_rate }}%</span></p>
+                <span class="badge bg-light text-dark border mt-2">有效期 {{ plan.days }} 天</span>
+            </div>
+            <div class="text-end">
+                <h4 class="text-danger fw-bold mb-0">¥ {{ plan.price }}</h4>
+                <div class="form-check mt-2 d-flex justify-content-end">
+                    <input class="form-check-input" type="radio" name="plan_id" value="{{ plan.id }}" id="plan_{{ plan.id }}">
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <p>暂无VIP套餐上架</p>
+    </div>
+    {% endfor %}
+    
+    <div class="fixed-bottom p-3 bg-white shadow-lg">
+        <form action="/h5/vip/buy" method="post" id="buyForm">
+            <input type="hidden" name="plan_id" id="selectedPlanId">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">当前余额: ¥ {{ "%.2f"|format(user.balance) }}</small>
+                </div>
+                <button type="button" onclick="submitBuy()" class="btn buy-btn rounded-pill px-5 shadow">立即开通</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <i class="fas fa-crown text-warning fa-3x mb-3"></i>
+                <h5 class="fw-bold">确认开通?</h5>
+                <p class="small text-muted">将从余额扣除对应金额</p>
+                <div class="d-grid gap-2">
+                    <button type="button" onclick="document.getElementById('buyForm').submit()" class="btn btn-warning fw-bold text-white">确认支付</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">再想想</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function selectPlan(id) {
+        // 移除所有选中样式
+        document.querySelectorAll('.plan-card').forEach(el => el.classList.remove('active'));
+        // 选中当前
+        event.currentTarget.classList.add('active');
+        // 选中 Radio
+        document.getElementById('plan_' + id).checked = true;
+        // 赋值隐藏域
+        document.getElementById('selectedPlanId').value = id;
+    }
+
+    function submitBuy() {
+        var id = document.getElementById('selectedPlanId').value;
+        if (!id) {
+            alert("请先选择一个套餐");
+            return;
+        }
+        var myModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        myModal.show();
+    }
+</script>
+{% endblock %}

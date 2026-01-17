@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - 开启致富之路{% endblock %}
+
+{% block head %}
+<style>
+    /* 登录页特有的全屏红色背景 */
+    body {
+        background: linear-gradient(135deg, #d00000 0%, #e63946 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .login-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .logo-text {
+        color: #d00000;
+        font-weight: 900;
+        font-size: 1.8rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-card">
+    <div class="logo-text">
+        🧧 红白悬赏
+    </div>
+    
+    <form action="/login" method="post">
+        <div class="mb-3">
+            <label class="form-label text-muted">账号</label>
+            <input type="text" name="username" class="form-control form-control-lg" placeholder="请输入用户名" required>
+        </div>
+        <div class="mb-4">
+            <label class="form-label text-muted">密码</label>
+            <input type="password" name="password" class="form-control form-control-lg" placeholder="请输入密码" required>
+        </div>
+        
+        <button type="submit" class="btn btn-gold w-100 py-3 mb-3 fs-5">立即登录</button>
+        
+        <div class="text-center">
+            <a href="/register" class="text-decoration-none text-muted">还没有账号？<span style="color: #d00000">去注册</span></a>
+        </div>
+    </form>
+</div>
+{% endblock %}

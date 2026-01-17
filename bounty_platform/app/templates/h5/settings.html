@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}设置中心{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    
+    <div class="d-flex align-items-center mb-4">
+        <a href="/h5/mine" class="text-dark text-decoration-none me-3">
+            <i class="fas fa-arrow-left fa-lg"></i>
+        </a>
+        <h5 class="fw-bold mb-0">设置中心</h5>
+    </div>
+
+    <div class="card card-custom bg-white border-0 shadow-sm mb-4">
+        <div class="card-body text-center py-4">
+            <div class="position-relative d-inline-block">
+                <div class="rounded-circle overflow-hidden border shadow-sm" 
+                     style="width: 80px; height: 80px; cursor: pointer;"
+                     onclick="document.getElementById('avatarInput').click()">
+                    {% if user.avatar %}
+                    <img src="{{ user.avatar }}" class="w-100 h-100" style="object-fit: cover;">
+                    {% else %}
+                    <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center text-muted">
+                        <i class="fas fa-camera fa-2x"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-1 small border border-white" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+                    <i class="fas fa-pen" style="font-size: 10px;"></i>
+                </div>
+            </div>
+            <h5 class="fw-bold mt-3 mb-0">{{ user.username }}</h5>
+            <p class="text-muted small">点击头像更换</p>
+            
+            <form id="avatarForm" action="/h5/settings/avatar" method="post" enctype="multipart/form-data" style="display: none;">
+                <input type="file" name="file" id="avatarInput" accept="image/*" onchange="document.getElementById('avatarForm').submit()">
+            </form>
+        </div>
+    </div>
+
+    <div class="card card-custom bg-white border-0 shadow-sm mb-4">
+        <div class="card-body text-center py-3">
+            <div class="mb-2 text-primary"><i class="fas fa-headset fa-2x"></i></div>
+            <h6 class="fw-bold mb-1">联系客服</h6>
+            
+            {% if contact_img %}
+            <img src="{{ contact_img }}" class="img-fluid rounded my-2 border" style="max-width: 150px;">
+            {% endif %}
+            
+            {% if contact_text %}
+            <div class="alert alert-primary bg-primary-subtle text-primary border-0 d-inline-block px-3 py-1 rounded-pill fw-bold small mb-0">
+                {{ contact_text }}
+                <i class="far fa-copy ms-2" style="cursor: pointer;" onclick="copyContact('{{ contact_text }}')"></i>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">暂无联系方式</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="list-group shadow-sm rounded-3 border-0 mb-4">
+        <a href="/h5/password" class="list-group-item list-group-item-action py-3 border-0 d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-lock text-warning me-2"></i> 修改登录密码</span>
+            <i class="fas fa-chevron-right text-muted small"></i>
+        </a>
+    </div>
+
+    <div class="d-grid">
+        <a href="/logout" class="btn btn-light text-danger py-3 fw-bold rounded-pill border">
+            退出登录
+        </a>
+    </div>
+</div>
+
+<div class="position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 11">
+  <div id="toastCopy" class="toast align-items-center text-white bg-success border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="fas fa-check-circle me-1"></i> 已复制</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyContact(text) {
+        var input = document.createElement('input');
+        input.setAttribute('value', text);
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        new bootstrap.Toast(document.getElementById('toastCopy')).show();
+    }
+</script>
+{% endblock %}

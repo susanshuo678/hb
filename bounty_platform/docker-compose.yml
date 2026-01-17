@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: bounty_platform
+    restart: always
+    ports:
+      - "9001:8000"  # 外部访问端口 : 容器内部端口
+    volumes:
+      # 挂载数据库目录，防止重启后数据丢失
+      - ./app/database:/app/app/database
+      # 挂载上传目录，防止用户截图丢失
+      - ./app/static/uploads:/app/app/static/uploads
+    environment:
+      # 安全密钥，用于加密 Token，生产环境建议改复杂点
+      - SECRET_KEY=redpacket_bounty_secret_2026

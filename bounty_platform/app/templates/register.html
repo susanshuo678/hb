@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}注册账号{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card card-custom p-4 bg-white">
+            <h3 class="text-center fw-bold mb-4 text-dark">✨ 欢迎加入</h3>
+            
+            {% if error %}
+            <div class="alert alert-danger py-2 small">{{ error }}</div>
+            {% endif %}
+
+            <form action="/register" method="post">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">用户名</label>
+                    <input type="text" name="username" class="form-control rounded-pill px-3" placeholder="设置用户名" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">密码</label>
+                    <input type="password" name="password" class="form-control rounded-pill px-3" placeholder="设置登录密码" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted">验证码 (纯数字)</label>
+                    <div class="input-group">
+                        <input type="text" name="captcha" class="form-control rounded-start-pill px-3" placeholder="输入4位数字" required>
+                        <img src="/captcha" id="captchaImg" class="border rounded-end-pill" style="cursor: pointer; height: 38px;" onclick="refreshCaptcha()" title="点击刷新">
+                    </div>
+                </div>
+
+                {% if invite_code %}
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted text-success">
+                        <i class="fas fa-user-friends me-1"></i> 推荐人ID
+                    </label>
+                    <input type="text" name="invite_code" class="form-control rounded-pill px-3 bg-light" value="{{ invite_code }}" readonly>
+                </div>
+                {% endif %}
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-red rounded-pill py-2 fw-bold">立即注册</button>
+                    <a href="/login" class="btn btn-outline-secondary rounded-pill py-2">已有账号？去登录</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-4 border-0 shadow">
+            <div class="mb-3">
+                <i class="fas fa-check-circle text-success fa-4x animate__animated animate__bounceIn"></i>
+            </div>
+            <h4 class="fw-bold mb-2">注册成功！</h4>
+            <p class="text-muted small mb-4">欢迎加入红白悬赏，开启赚钱之旅。</p>
+            <button onclick="location.href='/login'" class="btn btn-success w-100 rounded-pill fw-bold">知道了，去登录</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function refreshCaptcha() {
+        document.getElementById('captchaImg').src = "/captcha?" + new Date().getTime();
+    }
+
+    window.onload = function() {
+        // 🟢 双重保险：加上 |default(False) 防止 undefined 报错
+        var isSuccess = {{ success|default(False)|tojson }};
+        
+        if (isSuccess) {
+            var myModal = new bootstrap.Modal(document.getElementById('successModal'));
+            myModal.show();
+        }
+    }
+</script>
+{% endblock %}

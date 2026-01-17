@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}消息中心{% endblock %}
+
+{% block head %}
+<style>
+    .msg-card {
+        background: white; border-radius: 12px; padding: 1rem; margin-bottom: 0.8rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02); border-left: 4px solid #ddd;
+        transition: all 0.2s;
+    }
+    .msg-card.unread {
+        border-left-color: #d00000; /* 未读显示红色边框 */
+        background: #fffcfc;
+    }
+    .msg-icon {
+        width: 40px; height: 40px; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center;
+        margin-right: 1rem; flex-shrink: 0;
+    }
+    .icon-money { background: #e6f9ed; color: #2ecc71; } /* 钱相关的绿色 */
+    .icon-task { background: #e8f4fd; color: #3498db; }  /* 任务相关的蓝色 */
+    .icon-system { background: #fef5e6; color: #f39c12; } /* 系统相关的黄色 */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+        <h5 class="fw-bold m-0">消息通知</h5>
+        {% if notifications %}
+        <form action="/h5/messages/read_all" method="post">
+            <button type="submit" class="btn btn-sm btn-link text-muted text-decoration-none">
+                <i class="fas fa-check-double me-1"></i>全部已读
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="pb-5">
+        {% for n in notifications %}
+        <div class="msg-card {% if not n.is_read %}unread{% endif %}">
+            <div class="d-flex align-items-start">
+                <div class="msg-icon 
+                    {% if n.type == 'money' %}icon-money
+                    {% elif n.type == 'task' %}icon-task
+                    {% else %}icon-system{% endif %}">
+                    {% if n.type == 'money' %}<i class="fas fa-coins"></i>
+                    {% elif n.type == 'task' %}<i class="fas fa-clipboard-check"></i>
+                    {% else %}<i class="fas fa-bell"></i>{% endif %}
+                </div>
+                
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <h6 class="fw-bold mb-0 text-dark">{{ n.title }}</h6>
+                        <small class="text-muted" style="font-size: 0.75rem;">
+                            {{ n.created_at.strftime('%m-%d %H:%M') }}
+                        </small>
+                    </div>
+                    <p class="text-muted small mb-0">{{ n.content }}</p>
+                </div>
+                
+                {% if not n.is_read %}
+                <div class="ms-2 mt-1">
+                    <span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px; display:block;"></span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="far fa-bell-slash fa-3x mb-3 opacity-25"></i>
+            <p>暂时没有新消息</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="text-center mb-4">
+    <a href="/h5/mine" class="text-decoration-none text-muted">返回个人中心</a>
+</div>
+{% endblock %}

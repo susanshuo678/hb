@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}审核任务{% endblock %}
+{% block content %}
+<div class="container p-4">
+    <h4>审核中心</h4>
+    <table class="table table-hover bg-white shadow-sm rounded">
+        <thead>
+            <tr><th>用户</th><th>任务</th><th>模式</th><th>操作</th></tr>
+        </thead>
+        <tbody>
+            {% for sub in submissions %}
+            <tr>
+                <td>{{ sub.user.username }}</td>
+                <td>
+                    <div>{{ sub.task.title }}</div>
+                    {% if sub.assigned_material_id %}
+                    <span class="badge bg-warning text-dark">含素材</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if sub.task.price_mode == 'dynamic' %}
+                    <span class="badge bg-primary">审核定价</span>
+                    {% else %}
+                    <span class="badge bg-secondary">固定: {{ sub.task.price }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-success" 
+                        onclick="openApprove('{{ sub.id }}', '{{ sub.task.price_mode }}', '{{ sub.task.price }}')">
+                        通过
+                    </button>
+                    </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/audit/review" method="post" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">通过审核</h5></div>
+            <div class="modal-body">
+                <input type="hidden" name="submission_id" id="subId">
+                <input type="hidden" name="action" value="approve">
+                
+                <div id="dynamicInput" style="display:none;">
+                    <label class="form-label text-primary fw-bold">输入结算金额 (元)</label>
+                    <input type="number" step="0.01" name="amount" class="form-control">
+                </div>
+                <div id="fixedMsg" class="alert alert-success" style="display:none;">
+                    固定金额：<span id="fixedVal"></span> 元
+                </div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-success">确认结算</button></div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openApprove(id, mode, price) {
+    document.getElementById('subId').value = id;
+    if(mode === 'dynamic') {
+        document.getElementById('dynamicInput').style.display = 'block';
+        document.getElementById('fixedMsg').style.display = 'none';
+    } else {
+        document.getElementById('dynamicInput').style.display = 'none';
+        document.getElementById('fixedMsg').style.display = 'block';
+        document.getElementById('fixedVal').innerText = price;
+    }
+    new bootstrap.Modal(document.getElementById('approveModal')).show();
+}
+</script>
+{% endblock %}
