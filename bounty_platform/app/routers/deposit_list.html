@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}充值审核{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">💰 充值审核</h4>
+        <a href="/admin/dashboard" class="btn btn-outline-secondary">返回后台</a>
+    </div>
+
+    <div class="card card-custom bg-white">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>用户</th>
+                            <th>充值金额</th>
+                            <th>支付凭证</th>
+                            <th>申请时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in deposits %}
+                        <tr>
+                            <td>#{{ d.id }}</td>
+                            <td>
+                                <div class="fw-bold">{{ d.user.username }}</div>
+                                <div class="small text-muted">ID: {{ d.user_id }}</div>
+                            </td>
+                            <td class="fw-bold text-success fs-5">+{{ d.amount }}</td>
+                            <td>
+                                <a href="{{ d.proof_img }}" target="_blank">
+                                    <img src="{{ d.proof_img }}" style="height: 60px; border-radius: 6px; border: 1px solid #eee;">
+                                </a>
+                            </td>
+                            <td class="small text-muted">{{ d.created_at.strftime('%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if d.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">⏳ 待审核</span>
+                                {% elif d.status == 'approved' %}
+                                <span class="badge bg-success">✅ 已入账</span>
+                                {% else %}
+                                <span class="badge bg-secondary">❌ 已驳回</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if d.status == 'pending' %}
+                                <form action="/admin/deposit/process" method="post" class="d-flex gap-2">
+                                    <input type="hidden" name="did" value="{{ d.id }}">
+                                    <button name="action" value="approve" class="btn btn-sm btn-success" onclick="return confirm('确认凭证无误，给用户加款？')">通过</button>
+                                    <button name="action" value="reject" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定驳回？')">驳回</button>
+                                </form>
+                                {% else %}
+                                <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

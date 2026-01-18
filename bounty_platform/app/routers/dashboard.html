@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}数据看板{% endblock %}
+
+{% block head %}
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">📊 运营数据</h4>
+        <a href="/h5/index" target="_blank" class="btn btn-outline-primary">预览前台</a>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3"><div class="card card-custom bg-primary text-white p-3"><h6>待审任务</h6><h2 class="fw-bold">{{ stats.pending_audit }}</h2></div></div>
+        <div class="col-md-3"><div class="card card-custom bg-danger text-white p-3"><h6>待审提现</h6><h2 class="fw-bold">{{ stats.pending_withdraw }}</h2></div></div>
+        <div class="col-md-3"><div class="card card-custom bg-success text-white p-3"><h6>总用户</h6><h2 class="fw-bold">{{ stats.users }}</h2></div></div>
+        <div class="col-md-3"><div class="card card-custom bg-info text-white p-3"><h6>在线任务</h6><h2 class="fw-bold">{{ stats.active_tasks }}</h2></div></div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8"><div class="card card-custom bg-white p-3"><div id="chartGrowth" style="height: 300px;"></div></div></div>
+        <div class="col-lg-4"><div class="card card-custom bg-white p-3"><div id="chartMoney" style="height: 300px;"></div></div></div>
+    </div>
+
+    <div class="card card-custom bg-white p-4">
+        <h6 class="fw-bold mb-3">🛠️ 快捷管理</h6>
+        <div class="row g-3 text-center">
+            <div class="col-6 col-md-3">
+                <a href="/admin/task/new" class="d-block p-3 rounded bg-light text-decoration-none text-dark hover-shadow">
+                    <i class="fas fa-plus-circle fa-2x text-primary mb-2"></i><div class="small fw-bold">发布任务</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="/admin/materials" class="d-block p-3 rounded bg-light text-decoration-none text-dark hover-shadow">
+                    <i class="fas fa-boxes fa-2x text-purple mb-2" style="color: #6f42c1;"></i><div class="small fw-bold">素材库管理</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="/admin/deposit/list" class="d-block p-3 rounded bg-light text-decoration-none text-dark hover-shadow">
+                    <i class="fas fa-hand-holding-usd fa-2x text-danger mb-2"></i><div class="small fw-bold">充值审核</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="/admin/audit" class="d-block p-3 rounded bg-light text-decoration-none text-dark hover-shadow">
+                    <i class="fas fa-check-square fa-2x text-warning mb-2"></i><div class="small fw-bold">任务审核</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="/admin/withdraw/list" class="d-block p-3 rounded bg-light text-decoration-none text-dark hover-shadow">
+                    <i class="fas fa-wallet fa-2x text-info mb-2"></i><div class="small fw-bold">提现打款</div>
+                </a>
+            </div>
+            
+            <div class="col-6 col-md-3">
+                <a href="/admin/users" class="d-block p-3 rounded bg-light text-decoration-none text-dark hover-shadow">
+                    <i class="fas fa-users fa-2x text-success mb-2"></i><div class="small fw-bold">会员管理</div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="/admin/settings" class="d-block p-3 rounded bg-light text-decoration-none text-dark hover-shadow">
+                    <i class="fas fa-tools fa-2x text-secondary mb-2"></i><div class="small fw-bold">平台装修</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var cg = echarts.init(document.getElementById('chartGrowth'));
+    cg.setOption({
+        tooltip: { trigger: 'axis' }, xAxis: { data: {{ chart_dates|tojson }} }, yAxis: {},
+        series: [{ name: '用户', type: 'line', data: {{ chart_users|tojson }}, smooth: true }, { name: '任务', type: 'line', data: {{ chart_subs|tojson }}, smooth: true }]
+    });
+    var cm = echarts.init(document.getElementById('chartMoney'));
+    cm.setOption({
+        xAxis: { data: {{ chart_dates|tojson }} }, yAxis: {},
+        series: [{ type: 'bar', data: {{ chart_money|tojson }}, itemStyle: {color:'#dc3545'} }]
+    });
+</script>
+{% endblock %}

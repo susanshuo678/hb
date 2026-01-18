@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}VIP套餐管理{% endblock %}
+
+{% block content %}
+<div class="container p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4><i class="fas fa-crown text-warning me-2"></i>VIP 套餐配置</h4>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPlanModal">
+            <i class="fas fa-plus"></i> 新增套餐
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>套餐名称</th>
+                    <th>有效期 (天)</th>
+                    <th>价格 (元)</th>
+                    <th>加成比例 (%)</th>
+                    <th class="text-end">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in plans %}
+                <tr>
+                    <td class="fw-bold">{{ plan.name }}</td>
+                    <td>{{ plan.days }} 天</td>
+                    <td class="text-danger fw-bold">¥ {{ plan.price }}</td>
+                    <td><span class="badge bg-success">+{{ plan.bonus_rate }}%</span></td>
+                    <td class="text-end">
+                        <form action="/admin/vip/delete" method="post" class="d-inline">
+                            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定删除该套餐？')">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-center py-5 text-muted">暂无套餐，请点击右上角新增</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="addPlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="/admin/vip/add" method="post" class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">新增 VIP 套餐</h5></div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">套餐名称</label>
+                    <input type="text" name="name" class="form-control" placeholder="例如：月卡会员" required>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label">有效期 (天)</label>
+                        <input type="number" name="days" class="form-control" placeholder="30" required>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label">价格 (元)</label>
+                        <input type="number" step="0.01" name="price" class="form-control" placeholder="29.9" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">任务加成 (%)</label>
+                    <input type="number" name="bonus_rate" class="form-control" placeholder="例如：10 (即加成10%)" required>
+                    <div class="form-text">用户做任务时将获得额外奖励。</div>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="submit" class="btn btn-primary">确认添加</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -11,7 +11,7 @@ services:
     volumes:
       - ./data/mysql:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password_ChangeMe!"]
       timeout: 20s
       retries: 10
 
@@ -20,23 +20,45 @@ services:
     restart: always
     volumes:
       - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   web:
     build: .
-    container_name: bounty_v3_app
+    container_name: bounty_v3_web
     restart: always
     ports:
       - "9001:8000"
     environment:
       - DATABASE_URL=mysql+pymysql://root:root_password_ChangeMe!@db/bounty_db
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=bounty_v3_secret_key_2026
+      - SECRET_KEY=bounty_v3_secret_2026
     volumes:
-      # 🟢 关键修正：必须这样挂载，Python 才能找到 app 包
       - ./app:/app/app
-      - ./uploads:/app/app/static/uploads
+      - ./uploads:/app/app/static/uploads  # 🟢 修正挂载路径
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
+
+  # 🟢 V3 新增：异步任务处理 (Celery)
+  worker:
+    build: .
+    container_name: bounty_v3_worker
+    command: celery -A app.celery_app.celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=mysql+pymysql://root:root_password_ChangeMe!@db/bounty_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=bounty_v3_secret_2026
+    volumes:
+      - ./app:/app/app
+      - ./uploads:/app/app/static/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy

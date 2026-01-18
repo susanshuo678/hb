@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}装修设置{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">平台装修 & 设置</h4>
+        <a href="/admin/dashboard" class="btn btn-outline-secondary">返回看板</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-5 mb-4">
+            <div class="card card-custom bg-white mb-4">
+                <div class="card-header bg-white fw-bold text-success">💰 推广返佣</div>
+                <div class="card-body">
+                    <form action="/admin/settings/commission_rate" method="post">
+                        <div class="input-group">
+                            <input type="number" name="val" class="form-control" value="{{ commission_rate }}" required>
+                            <span class="input-group-text">%</span>
+                            <button type="submit" class="btn btn-success">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card card-custom bg-white mb-4">
+                <div class="card-header bg-white fw-bold text-danger">🧧 收款码设置</div>
+                <div class="card-body text-center">
+                    {% if pay_qrcode %}<img src="{{ pay_qrcode }}" class="img-fluid border rounded mb-3" style="max-height: 150px;">{% endif %}
+                    <form action="/admin/settings/paycode" method="post" enctype="multipart/form-data">
+                        <input type="file" name="file" class="form-control mb-2" accept="image/*" required>
+                        <button type="submit" class="btn btn-danger w-100">更新收款码</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card card-custom bg-white mb-4">
+                <div class="card-header bg-white fw-bold text-primary">📢 首页公告</div>
+                <div class="card-body">
+                    <form action="/admin/settings/announcement" method="post">
+                        <textarea name="val" class="form-control mb-2" rows="3">{{ announcement }}</textarea>
+                        <button type="submit" class="btn btn-primary w-100">保存</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7 mb-4">
+            <div class="card card-custom bg-white mb-4">
+                <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                    <span>🖼️ 轮播图</span>
+                    <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#uploadBannerModal">新增</button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0 small">
+                        <tbody>
+                            {% for b in banners %}
+                            <tr>
+                                <td><img src="{{ b.image_path }}" style="height: 40px;"></td>
+                                <td>{{ b.link_url or '无跳转' }}</td>
+                                <td class="text-end">
+                                    <form action="/admin/settings/banner/delete" method="post" class="d-inline">
+                                        <input type="hidden" name="banner_id" value="{{ b.id }}">
+                                        <button class="btn btn-sm text-danger"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card card-custom bg-white">
+                <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                    <span>📂 任务分类</span>
+                    <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#addCategoryModal">新增</button>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table mb-0 small">
+                        <tbody>
+                            {% for c in categories %}
+                            <tr>
+                                <td>{{ c.icon }}</td><td>{{ c.name }}</td><td class="text-muted">{{ c.code }}</td>
+                                <td class="text-end">
+                                    <form action="/admin/settings/category/delete" method="post" class="d-inline">
+                                        <input type="hidden" name="cat_id" value="{{ c.id }}">
+                                        <button class="btn btn-sm text-danger"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="uploadBannerModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <form action="/admin/settings/banner" method="post" enctype="multipart/form-data">
+        <div class="modal-header">上传轮播图</div>
+        <div class="modal-body">
+            <input type="file" name="file" class="form-control mb-3" required>
+            <input type="text" name="val" class="form-control" placeholder="跳转URL (可选)">
+        </div>
+        <div class="modal-footer"><button type="submit" class="btn btn-primary w-100">开始上传</button></div>
+    </form>
+</div></div></div>
+
+<div class="modal fade" id="addCategoryModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <form action="/admin/settings/category" method="post">
+        <div class="modal-header">新增分类</div>
+        <div class="modal-body">
+            <input type="text" name="name" class="form-control mb-2" placeholder="分类名称" required>
+            <input type="text" name="code" class="form-control mb-2" placeholder="英文代号" required>
+            <input type="text" name="icon" class="form-control" placeholder="Emoji图标">
+        </div>
+        <div class="modal-footer"><button type="submit" class="btn btn-dark w-100">保存</button></div>
+    </form>
+</div></div></div>
+{% endblock %}

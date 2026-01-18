@@ -41,8 +41,7 @@
         <div class="text-muted small" style="white-space: pre-wrap;">{{ task.description }}</div>
     </div>
     
-    {% else %}
-        
+  {% else %}
         {% if assigned_material %}
         <div class="card card-custom border-danger mb-4" style="border: 2px dashed #dc3545;">
             <div class="card-header bg-danger text-white fw-bold">
@@ -53,15 +52,33 @@
                 <div class="bg-light p-3 rounded mb-3 position-relative">
                     <small class="text-muted d-block mb-1">专属文案 (点击复制)</small>
                     <div id="copyText" class="fw-bold text-dark">{{ assigned_material.content }}</div>
-                    <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" onclick="copyContent()">
-                        复制
-                    </button>
+                    <button class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2" onclick="copyContent()">复制</button>
                 </div>
                 {% endif %}
                 
                 {% if assigned_material.images %}
                 <small class="text-muted d-block mb-1">专属配图 (长按保存)</small>
-                <img src="{{ assigned_material.images }}" class="img-fluid rounded shadow-sm">
+                
+                {% set img_list = assigned_material.images %}
+                {% if img_list is string %}
+                    {% set img_list = [img_list] %} 
+                {% endif %}
+                {% if img_list|length > 1 %}
+                    <div id="matCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner rounded shadow-sm">
+                            {% for img in img_list %}
+                            <div class="carousel-item {% if loop.first %}active{% endif %}">
+                                <img src="{{ img }}" class="d-block w-100">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#matCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span></button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#matCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span></button>
+                    </div>
+                {% else %}
+                    <img src="{{ img_list[0] if img_list|length > 0 else '' }}" class="img-fluid rounded shadow-sm">
+                {% endif %}
+                
                 {% endif %}
             </div>
         </div>

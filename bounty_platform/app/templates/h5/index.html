@@ -26,82 +26,44 @@
 {% endblock %}
 
 {% block content %}
-{% if banners %}
-<div class="banner-container">
-    <div id="homeCarousel" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-inner">
-            {% for b in banners %}
-            <div class="carousel-item {% if loop.first %}active{% endif %}">
-                <a href="{{ b.link_url or '#' }}"><img src="{{ b.image_path }}" class="d-block w-100"></a>
+{% if popup_content %}
+<div class="modal fade" id="homePopup" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">📢 公告</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            {% endfor %}
+            <div class="modal-body">
+                <div class="bg-light p-3 rounded">
+                    {{ popup_content | safe }}
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-danger w-100 rounded-pill" data-bs-dismiss="modal">我知道了</button>
+            </div>
         </div>
     </div>
 </div>
 {% endif %}
 
-{% if announcement %}
-<div class="notice-bar">
-    <i class="fas fa-bullhorn notice-icon"></i>
-    <marquee scrollamount="5">{{ announcement }}</marquee>
-</div>
-{% endif %}
+{% endblock %}
 
-<div class="category-nav">
-    <a href="/h5/index?cat=all" class="cat-item {% if current_cat == 'all' %}active{% endif %}">全部</a>
-    {% for c in categories %}
-    <a href="/h5/index?cat={{ c.code }}" class="cat-item {% if current_cat == c.code %}active{% endif %}">
-        {{ c.icon }} {{ c.name }}
-    </a>
-    {% endfor %}
-</div>
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var popupContent = `{{ popup_content }}`;
+        if (!popupContent) return;
 
-<div class="d-flex justify-content-between align-items-center mb-3 px-1">
-    <h5 class="fw-bold m-0"><i class="fas fa-fire text-danger me-2"></i>最新任务</h5>
-    <span class="text-muted small">共 {{ tasks|length }} 个</span>
-</div>
-
-<div class="px-1 pb-5">
-    {% if tasks %}
-        {% for task in tasks %}
-        <div class="task-card" onclick="location.href='/h5/task/{{ task.id }}'">
-            <div class="d-flex justify-content-between">
-                <div>
-                    <h6 class="fw-bold mb-1 text-dark">
-                        {% for c in categories %}
-                            {% if task.category == c.code %}
-                            <span class="badge bg-{{ c.color }} me-1" style="font-size:0.7em">{{ c.name[:2] }}</span>
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {{ task.title }}
-                    </h6>
-                    <div class="mt-2">
-                        {% if task.text_req != 'none' %}<span class="badge bg-light text-secondary border small">📝 填字</span>{% endif %}
-                        {% if task.image_req != 'none' %}<span class="badge bg-light text-secondary border small">📸 截图</span>{% endif %}
-                    </div>
-                </div>
-                <div class="text-end">
-                    <div class="fs-4 fw-bold text-danger">¥ {{ task.reward_desc }}</div>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill mt-1">去接单</button>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="text-center py-5 text-muted"><p>该分类下暂无任务</p></div>
-    {% endif %}
-</div>
-
-<div class="bottom-nav">
-    <a href="/h5/index" class="nav-item active">
-        <i class="fas fa-home"></i> 任务大厅
-    </a>
-    <a href="/h5/rank" class="nav-item">
-        <i class="fas fa-chart-bar"></i> 排行榜
-    </a>
-    <a href="/h5/mine" class="nav-item">
-        <i class="fas fa-user"></i> 个人中心
-    </a>
-</div>
+        // 🟢 每日只弹一次逻辑
+        var today = new Date().toISOString().slice(0, 10); // 2026-01-17
+        var lastPop = localStorage.getItem("last_popup_date");
+        
+        if (lastPop !== today) {
+            var myModal = new bootstrap.Modal(document.getElementById('homePopup'));
+            myModal.show();
+            localStorage.setItem("last_popup_date", today);
+        }
+    });
+</script>
 {% endblock %}

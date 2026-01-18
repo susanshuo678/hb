@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}帮助中心{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h4 class="fw-bold mb-4">💡 常见问题</h4>
+    <div class="accordion" id="faqAccordion">
+        {% for faq in faqs %}
+        <div class="accordion-item border-0 mb-2 shadow-sm rounded overflow-hidden">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
+                    {{ faq.q }}
+                </button>
+            </h2>
+            <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body bg-light text-muted small">
+                    {{ faq.a }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="text-center mt-4">
+        <a href="/h5/mine" class="btn btn-outline-secondary rounded-pill">返回个人中心</a>
+    </div>
+</div>
+{% endblock %}
